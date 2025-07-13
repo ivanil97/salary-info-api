@@ -1,0 +1,27 @@
+services:
+  db:
+    container_name: salary_info_postgres
+    image: postgres
+    environment:
+      - POSTGRES_DB=${DB_NAME:-salary_info_api}
+      - POSTGRES_USER=${DB_USER:-admin}
+      - POSTGRES_PASSWORD=${DB_PASS:-12345678}
+    ports:
+      - ${DB_PORT}:5432
+    volumes:
+      - .postgres:/var/lib/postgresql/data
+    restart: always
+
+  app:
+    container_name: salary_info_api
+    build: ./
+    depends_on:
+      - db
+    command: sh -c 'until pg_isready -h db -p 5432; do sleep 1; done; alembic upgrade head && python -m core.scripts.init_admin_user && uvicorn core.main:app --host 0.0.0.0 --reload'
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    restart: always
+    env_file:
+      - .env
